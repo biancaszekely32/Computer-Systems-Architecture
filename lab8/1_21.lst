@@ -1,0 +1,64 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit, printf, scanf            
+     8                                  import exit msvcrt.dll     
+     9                                  import printf msvcrt.dll     ; indicating to the assembler that the printf fct can be found in the msvcrt.dll library
+    10                                  import scanf msvcrt.dll 
+    11                                  
+    12                                  ;21.Read two words a and b in base 10 from the keyboard. 
+    13                                  ;Determine the doubleword c such that the low word of c is given by the sum of the a and b 
+    14                                  ;and the high word of c is given by the difference between a and b. Display the result in base 16 
+    15                                  ;Example:
+    16                                  ;   a = 574, b = 136
+    17                                  ;   c = 01B602C6h
+    18                                  
+    19                                  ; our data is declared here (the variables needed by our program)
+    20                                  segment  data use32 class=data
+    21 00000000 0000                    	a dw 0       ; rezervam un spatiu de un word pt a, pe care il initializam cu 0
+    22 00000002 0000                        b dw 0       ; rezervam un spatiu de un word pt b, pe care il initializam cu 0
+    23 00000004 00000000                    c dd 0       ; rezervam un spatiu de un doubleword pt c, pe care il initializam cu 0
+    24 00000008 633D25786800                message db "c=%xh",0
+    25 0000000E 256400                      format  db "%d", 0  ; %d <=> a decimal number (base 10)
+    26                                  
+    27                                  
+    28                                      
+    29                                  segment  code use32 class=code
+    30                                      start:
+    31                                                                                 
+    32                                          ; calling scanf(format, n) => we read the number and store it in the variable n
+    33                                          ; push parameters on the stack from right to left
+    34 00000000 68[00000000]                    push  dword a       ; adresa lui a, nu valoarea
+    35 00000005 68[0E000000]                    push  dword format  ; formatul in care vrem sa citim valoarea
+    36 0000000A FF15[00000000]                  call  [scanf]       ; call scanf pentru citire
+    37 00000010 83C408                          add  esp, 4 * 2     ; eliberam stackul de valorile introduse
+    38                                          
+    39 00000013 68[02000000]                    push  dword b       ; adresa lui b, nu valoarea
+    40 00000018 68[0E000000]                    push  dword format  ; formatul in care vrem sa citim valoarea
+    41 0000001D FF15[00000000]                  call  [scanf]       ; call scanf pentru citire
+    42 00000023 83C408                          add  esp, 4 * 2     ; eliberam stackul de valorile introduse
+    43 00000026 A1[00000000]                    mov eax, [a]        ; punem in eax un dword de la adresa lui a, adica exact valoarea lui a
+    44 0000002B 0305[02000000]                  add eax, [b]        ; adaugam in eax un dword de la adresa lui b, adica exact valoarea lui b
+    45                                          ; in eax=sum(a si b)
+    46                                          
+    47 00000031 A3[04000000]                    mov [c], eax;the sum of the a and b is in the low word of c
+    48                                  
+    49 00000036 8B1D[00000000]                  mov ebx, [a]        ; punem in ebx un dword de la adresa lui a, adica exact valoarea lui a
+    50 0000003C 1B1D[02000000]                  sbb ebx, [b]        ; adaugam in ebx un dword de la adresa lui b, adica exact valoarea lui b
+    51                                          ; in ebx=dif(a si b)
+    52                                          
+    53 00000042 66891D[06000000]                mov [c+2], bx;the dif of the a and b is in the high word of c
+    54                                          
+    55 00000049 FF35[00000000]                  push  dword [a]
+    56 0000004F FF35[02000000]                  push  dword [b]
+    57 00000055 FF35[04000000]                  push  dword [c]
+    58 0000005B 68[08000000]                    push  dword message ; push parameters on the stack from right to left
+    59 00000060 FF15[00000000]                  call  [printf]      ; call printf pentru afisare
+    60 00000066 83C410                          add  esp,4*4     ; eliberam stackul de valorile introduse
+    61                                          
+    62                                          ; exit(0)
+    63 00000069 6A00                            push  dword 0       ; push the parameter for exit on the stack
+    64 0000006B FF15[00000000]                  call  [exit] 

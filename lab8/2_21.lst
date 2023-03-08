@@ -1,0 +1,104 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit, fopen, fclose, fprintf ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll     ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                             ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  import fopen msvcrt.dll
+    11                                  import fclose msvcrt.dll
+    12                                  import fprintf msvcrt.dll
+    13                                                            
+    14                                  ;21.A file name and a text (defined in the data segment) are given. 
+    15                                  ;The text contains lowercase letters, digits and spaces.
+    16                                  ; Replace all the digits on odd positions with the character ‘X’. 
+    17                                  ;Create the file with the given name and write the generated text to file.            
+    18                                  
+    19                                  
+    20                                  ; our data is declared here (the variables needed by our program)
+    21                                  segment data use32 class=data
+    22 00000000 416E61206172652032-         text db "Ana are 2123421 de Banane din 1998776900", 0 
+    22 00000009 313233343231206465-
+    22 00000012 2042616E616E652064-
+    22 0000001B 696E20313939383737-
+    22 00000024 3639303000         
+    23                                      len_text equ $-text-1 
+    24 00000029 7369722E74787400            file_name db "sir.txt", 0   ; filename to be created
+    25 00000031 7700                        access_mode db "w", 0       ; file access mode:
+    26                                                                  ; w - creates an empty file for writing
+    27 00000033 FFFFFFFF                    file_descriptor dd -1       ; variable to hold the file descriptor
+    28 00000037 2573000000000000            format_sir dd '%s', 0
+    29                                  
+    30                                  ; our code starts here
+    31                                  segment code use32 class=code
+    32                                      start:
+    33 00000000 68[31000000]                    push dword access_mode     ; open the file
+    34 00000005 68[29000000]                    push dword file_name
+    35 0000000A FF15[00000000]                  call [fopen]
+    36 00000010 83C408                          add esp, 4*2                ; clean-up the stack
+    37                                  
+    38 00000013 A3[33000000]                    mov [file_descriptor], eax  ; store the file descriptor returned by fopen
+    39                                          
+    40                                          ; check if fopen() has successfully created the file (EAX != 0)
+    41 00000018 83F800                          cmp eax, 0
+    42 0000001B 7467                            je final_final
+    43                                          
+    44 0000001D BE[00000000]                    mov esi, text
+    45 00000022 BF[00000000]                    mov edi, text  ;modific datele din memorie si atunci pun in esi=edi adresa sirului meu
+    46 00000027 B928000000                      mov ecx, len_text  ;lungimea in ecx
+    47 0000002C BB00000000                      mov ebx,0;calculam pozitiile
+    48 00000031 E329                            jecxz final
+    49 00000033 FC                              cld
+    50                                          loop1:
+    51 00000034 AC                                  lodsb   ;iau un caracter din sir
+    52 00000035 3C30                                cmp al, '0'  ;compar cu codul ascii a lui 0
+    53 00000037 7318                                jae check_digit    ;daca e mai mare,  verific daca e mai mic decat 9
+    54                                              back:  ;label de intoarcere in loop-ul de citire
+    55 00000039 AA                                  stosb  ;punem in memorie X sau acelasi caracter
+    56 0000003A 43                                  inc ebx; ne ducem la cealalta pozitie
+    57 0000003B 39CB                                cmp ebx,ecx;verificam daca nu am ajuns la finalul sirului
+    58 0000003D 741D                                je final; daca e egal am parcurs tot sirul
+    59 0000003F E2F3                            loop loop1
+    60                                          
+    61 00000041 EB19                            jmp final  ;dupa ce am trecut prin toate elementele sirului, sarim la final peste label-uri
+    62                                          
+    63                                          change:
+    64 00000043 B058                            mov al, 'X' ;punem codul ascii a lui X in AL
+    65 00000045 EBF2                            jmp back  ;ne intoarcem in loop
+    66                                          
+    67                                          odd_pos:
+    68 00000047 F7C301000000                    test ebx,1
+    69 0000004D 75F4                            jnz change
+    70 0000004F EBE8                            jmp back
+    71                                          
+    72                                          check_digit:
+    73 00000051 3C39                            cmp al, '9'; daca e mai mic, atunci clar e o cifra
+    74 00000053 76F2                            jbe odd_pos; verificam daca este pe pozitie impara
+    75 00000055 EBE2                            jmp back
+    76                                          
+    77                                          
+    78                                          
+    79 00000057 B800000000                      mov eax, 0
+    80                                          
+    81                                          final:
+    82                                          
+    83                                          ;call fprintf to write in the file
+    84 0000005C 68[00000000]                    push dword text
+    85 00000061 68[37000000]                    push dword format_sir
+    86 00000066 FF35[33000000]                  push dword [file_descriptor]
+    87 0000006C FF15[00000000]                  call [fprintf]
+    88 00000072 83C40C                          add esp, 4*3
+    89                                          
+    90                                          ; call fclose() to close the file
+    91                                          ; fclose(file_descriptor)
+    92 00000075 FF35[33000000]                  push dword [file_descriptor]
+    93 0000007B FF15[00000000]                  call [fclose]
+    94 00000081 83C404                          add esp, 4
+    95                                  
+    96                                          final_final:
+    97                                          
+    98                                          ; exit(0)
+    99 00000084 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+   100 00000086 FF15[00000000]                  call    [exit]       ; call exit to terminate the program

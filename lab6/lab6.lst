@@ -1,0 +1,54 @@
+     1                                  ;19.Being given two strings of bytes, compute all positions where the second string appears as a substring in the first string.
+     2                                  bits 32 ; assembling for the 32 bits architecture
+     3                                  
+     4                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     5                                  global start        
+     6                                  
+     7                                  ; declare external functions needed by our program
+     8                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     9                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    10                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    11                                  
+    12                                  ; our data is declared here (the variables needed by our program)
+    13                                  segment data use32 class=data
+    14                                      ; ...
+    15 00000000 2D15070D4309031507-         s1 db 45,21,7,13,67,9,3,21, 7, 13,89
+    15 00000009 0D59               
+    16 0000000B 15070D                      s2 db 21, 7, 13
+    17                                      l1 equ $-s1
+    18                                      l2 equ $-s2
+    19 0000000E 00<rept>                    d times l1 db 0
+    20                                      
+    21                                      ;2,3,4
+    22                                      ;8,9,A
+    23                                  ; our code starts here
+    24                                  segment code use32 class=code
+    25                                      start:
+    26                                          ; ...
+    27 00000000 BE[00000000]                mov esi,s1 
+    28 00000005 B90B000000                  mov ecx,l1-l2 ; in ecx we put the length of s1 
+    29 0000000A BB00000000                  mov ebx, 0
+    30 0000000F BF00000000                  mov edi, 0
+    31                                      repeta:
+    32 00000014 AC                             lodsb ;in al we will have the first number from s1 (the byte from the adress <ds:esi>)
+    33                                         Search:
+    34 00000015 8A97[0B000000]                      mov dl, [s2+edi] ; in dl we put the elements from s2
+    35 0000001B 38D0                                cmp al, dl  ; we compare the elements from s2 with the elements from s1
+    36 0000001D 7409                                je Found
+    37 0000001F 83FF03                              cmp edi, l2
+    38 00000022 7412                                je No ; if we went through the whole string s2 and we did not find the element from s1 in the substring s2 we jump to No 
+    39 00000024 47                                  inc edi
+    40 00000025 41                                  inc ecx
+    41 00000026 E2ED                            loop Search
+    42                                          Found:
+    43 00000028 47                                  inc edi
+    44 00000029 6689B3[0E000000]                  mov [d+ebx], si ; we add the positions where s2 appears in s1 
+    45 00000030 BF00000000                        mov edi, 0
+    46 00000035 43                                inc ebx
+    47                                          No:
+    48 00000036 BF00000000                        mov edi, 0
+    49                                          
+    50 0000003B E2D7                        loop repeta
+    51                                      
+    52 0000003D 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    53 0000003F FF15[00000000]                  call    [exit]       ; call exit to terminate the program

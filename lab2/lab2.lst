@@ -1,0 +1,106 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                    ;2)
+    14                                      ; a db 4
+    15                                      ; b db 3
+    16                                      ; c db 9 
+    17                                      ; d db 10
+    18                                    ;3)
+    19                                      ; a dw 10
+    20                                      ; b dw 64
+    21                                      ; c dw 20 
+    22                                      ; d dw 5
+    23                                    ;4)
+    24                                      ; a db 12
+    25                                      ; b db 70
+    26                                      ; c db 4
+    27                                      ; d dw 256
+    28                                    
+    29                                    ;5)
+    30 00000000 14                          a db 20
+    31 00000001 1E                          b db 30
+    32 00000002 0A                          c db 10
+    33 00000003 08                          d db 8
+    34 00000004 7000                        e dw 112 
+    35 00000006 3200                        f dw 50
+    36 00000008 0001                        g dw 256
+    37 0000000A 0E01                        h dw 270
+    38                                  
+    39                                  ; our code starts here
+    40                                  segment code use32 class=code
+    41                                      start:
+    42                                        ; 1)64*4
+    43                                          ;mov ax, 64
+    44                                          ;mov bx, 4
+    45                                          ;mul bx
+    46                                          
+    47                                        ;2)a,b,c,d - byte
+    48                                        ;  (c+d+d)-(a+a+b)= (9+10+10)-(4+4+3)=29-11= 18= 12h
+    49                                          ; mov ax,0
+    50                                          ; mov al, [c]
+    51                                          ; add al, [d]
+    52                                          ; add al, [d]
+    53                                          
+    54                                          ; mov bl,[a]
+    55                                          ; add bl,[a]
+    56                                          ; add bl,[b]
+    57                                          
+    58                                          ; sub al,bl 
+    59                                          
+    60                                        ;3)a,b,c,d - word
+    61                                        ;(a+b-c)-d = (10+64-20)-5= 54- 5= 49=31h
+    62                                          ; mov ax,[a]
+    63                                          ; add ax,[b]
+    64                                          ; sub ax,[c]
+    65                                          ; sub ax,[d]
+    66                                          
+    67                                        ;4)a,b,c - byte, d - word
+    68                                        ;[100-10*a+4*(b+c)]-d=[100-10*12+4*(70+4)]-256= [100-120+296]-256=20=14h
+    69                                          ; mov ax,0
+    70                                          ; mov al, [a]
+    71                                          ; mov bl, 10
+    72                                          ; mul bl ; 10*a
+    73                                        
+    74                                          ; mov bx, ax
+    75                                          ; mov ax,0
+    76                                          ; mov al,[b]
+    77                                          ; add al,[c]
+    78                                          ; mov dl,4
+    79                                          ; mul dl  ; 4*(b+c)
+    80                                        
+    81                                          ; mov cx, 100
+    82                                          ; sub cx,bx ; 100-10*a
+    83                                          ; add cx,ax ; 100-10*a+4*(b+c)
+    84                                          ; sub cx, [d]; [100-10*a+4*(b+c)]-d
+    85                                        
+    86                                          ; mov ax,0
+    87                                          ; mov ax,cx ; result in ax
+    88                                       
+    89                                        
+    90                                        ;5)a,b,c,d-byte, e,f,g,h-word
+    91                                        ;(e+f+g)/(a+b)=(112+50+256)/(20+30)=8 r=18=12h
+    92 00000000 66B80000                        mov ax,0
+    93 00000004 66A1[04000000]                  mov ax,[e]
+    94 0000000A 660305[06000000]                add ax,[f]
+    95 00000011 660305[08000000]                add ax,[g]
+    96                                          
+    97 00000018 66BB0000                        mov bx,0
+    98 0000001C 8A1D[00000000]                  mov bl,[a]
+    99 00000022 021D[01000000]                  add bl,[b]
+   100                                          
+   101 00000028 F6F3                            div bl ; al=8,ah=18=12h
+   102                                        
+   103                                          
+   104                                          ; exit(0)
+   105 0000002A 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+   106 0000002C FF15[00000000]                  call    [exit]       ; call exit to terminate the program
